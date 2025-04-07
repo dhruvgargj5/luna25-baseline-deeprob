@@ -1,6 +1,7 @@
 """
 Inference script for predicting malignancy of lung nodules
 """
+
 import numpy as np
 import dataloader
 import torch
@@ -17,6 +18,7 @@ logging.basicConfig(
     format="[%(levelname)s][%(asctime)s] %(message)s",
     datefmt="%I:%M:%S",
 )
+
 
 # define processor
 class MalignancyProcessor:
@@ -37,11 +39,13 @@ class MalignancyProcessor:
             logging.info("Initializing the deep learning system")
 
         if self.mode == "2D":
-            self.model_2d = ResNet18(weights=None).cuda()
+            # self.model_2d = ResNet18(weights=None).cuda()
+            self.model_2d = ResNet18(weights=None)
         elif self.mode == "3D":
             self.model_3d = I3D(num_classes=1, pre_trained=False, input_channels=3).cuda()
 
-        self.model_root = "/opt/app/resources/"
+        # self.model_root = "/opt/app/resources/"
+        self.model_root = "results"
 
     def define_inputs(self, image, header, coords):
         self.image = image
@@ -93,14 +97,16 @@ class MalignancyProcessor:
             nodules.append(patch)
 
         nodules = np.array(nodules)
-        nodules = torch.from_numpy(nodules).cuda()
+        # nodules = torch.from_numpy(nodules).cuda()
+        nodules = torch.from_numpy(nodules)
 
         ckpt = torch.load(
             os.path.join(
                 self.model_root,
                 self.model_name,
                 "best_metric_model.pth",
-            )
+            ),
+            map_location=torch.device("cpu"),
         )
         model.load_state_dict(ckpt)
         model.eval()
