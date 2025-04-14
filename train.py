@@ -1,6 +1,8 @@
 """
 Script for training a ResNet18 or I3D to classify a pulmonary nodule as benign or malignant.
 """
+
+from models.densenet121 import DenseNet121
 from models.model_2d import ResNet18
 from models.model_3d import I3D
 from dataloader import get_data_loader
@@ -43,7 +45,6 @@ def train(
     train_csv_path,
     valid_csv_path,
     exp_save_root,
-
 ):
     """
     Train a ResNet18 or an I3D model
@@ -60,19 +61,11 @@ def train(
 
     print()
 
-    logging.info(
-        f"Number of malignant training samples: {train_df.label.sum()}"
-    )
-    logging.info(
-        f"Number of benign training samples: {len(train_df) - train_df.label.sum()}"
-    )
+    logging.info(f"Number of malignant training samples: {train_df.label.sum()}")
+    logging.info(f"Number of benign training samples: {len(train_df) - train_df.label.sum()}")
     print()
-    logging.info(
-        f"Number of malignant validation samples: {valid_df.label.sum()}"
-    )
-    logging.info(
-        f"Number of benign validation samples: {len(valid_df) - valid_df.label.sum()}"
-    )
+    logging.info(f"Number of malignant validation samples: {valid_df.label.sum()}")
+    logging.info(f"Number of benign validation samples: {len(valid_df) - valid_df.label.sum()}")
 
     # create a training data loader
     weights = make_weights_for_balanced_classes(train_df.label.values)
@@ -104,10 +97,12 @@ def train(
         size_px=config.SIZE_PX,
     )
 
-    device = torch.device("cuda:0")
+    # device = torch.device("cuda:0")
+    device = torch.device("cpu")
 
     if config.MODE == "2D":
-        model = ResNet18().to(device)
+        # model = ResNet18().to(device)
+        model = DenseNet121(densenet121_path="./resources/RadImageNet_pytorch/DenseNet121.pt").to(device)
     elif config.MODE == "3D":
         model = I3D(
             num_classes=1,
@@ -159,13 +154,9 @@ def train(
             epoch_loss += loss.item()
             epoch_len = len(train_df) // train_loader.batch_size
             if step % 100 == 0:
-                logging.info(
-                    "{}/{}, train_loss: {:.4f}".format(step, epoch_len, loss.item())
-                )
+                logging.info("{}/{}, train_loss: {:.4f}".format(step, epoch_len, loss.item()))
         epoch_loss /= step
-        logging.info(
-            "epoch {} average train loss: {:.4f}".format(epoch + 1, epoch_loss)
-        )
+        logging.info("epoch {} average train loss: {:.4f}".format(epoch + 1, epoch_loss))
 
         # validate
 
@@ -195,9 +186,7 @@ def train(
                 epoch_len = len(valid_df) // valid_loader.batch_size
 
             epoch_loss /= step
-            logging.info(
-                "epoch {} average valid loss: {:.4f}".format(epoch + 1, epoch_loss)
-            )
+            logging.info("epoch {} average valid loss: {:.4f}".format(epoch + 1, epoch_loss))
 
             y_pred = torch.sigmoid(y_pred.reshape(-1)).data.cpu().numpy().reshape(-1)
             y = y.data.cpu().numpy().reshape(-1)
@@ -238,16 +227,15 @@ def train(
         counter += 1
 
     logging.info(
-        "train completed, best_metric: {:.4f} at epoch: {}".format(
-            best_metric, best_metric_epoch
-        )
+        "train completed, best_metric: {:.4f} at epoch: {}".format(best_metric, best_metric_epoch)
     )
 
 
 if __name__ == "__main__":
 
-
-    experiment_name = f"{config.EXPERIMENT_NAME}-{config.MODE}-{datetime.today().strftime('%Y%m%d')}"
+    experiment_name = (
+        f"{config.EXPERIMENT_NAME}-{config.MODE}-{datetime.today().strftime('%Y%m%d')}"
+    )
 
     exp_save_root = config.EXPERIMENT_DIR / experiment_name
     exp_save_root.mkdir(parents=True, exist_ok=True)
@@ -257,4 +245,4 @@ if __name__ == "__main__":
         train_csv_path=config.CSV_DIR_TRAIN,
         valid_csv_path=config.CSV_DIR_VALID,
         exp_save_root=exp_save_root,
-        )
+    )

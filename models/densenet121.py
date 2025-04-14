@@ -1,8 +1,9 @@
 import torch
 from torch import nn
 from torchvision import models
-from blitz.modules import BayesianLinear
-# from torchinfo import summary
+
+# from blitz.modules import BayesianLinear
+
 
 class DenseNet121(nn.Module):
     def __init__(self, densenet121_path):
@@ -12,7 +13,8 @@ class DenseNet121(nn.Module):
         base_model.load_state_dict(densenet121_dict, strict=False)
         self.features = base_model.features
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.classifier = BayesianLinear(1024, 1)
+        self.classifier = nn.Linear(1024, 1)
+        # self.classifier = BayesianLinear(1024, 1)
 
     def forward(self, x):
         feature_map = self.features(x)
